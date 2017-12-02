@@ -17,24 +17,15 @@ def Update(s):
 def IsVariable(x):
 	if x[0].isupper():
 		return False
-	for i in range(len(x)):
-		if not x[i].isalpha():
-			return False
-	return True
+	return x.isalnum()
 def IsConstant(x):
 	if x[0].islower():
 		return False
-	for i in range(len(x)):
-		if not x[i].isalpha():
-			return False
-	return True
+	return x.isalnum()
 def IsPredicateOrFunction(x):
 	if x[0]=="[":
 		return False
-	for i in range(len(x)):
-		if x[i]=="(":
-			return True
-	return False
+	return "(" in x
 def Args(x):
 	return "["+x[x.find("(")+1:-1]+"]"
 def Operator(x):
@@ -55,7 +46,8 @@ def  Unify_var(x,y,s):
 	else:
 		s[x]=y
 		return s
-def Unify(x,y,s):
+def Unify(x,y,s={}):
+
 	if s=="fail":
 		return "fail"
 	elif x==y:
@@ -139,25 +131,22 @@ def Resolution(exp1,exp2):
 				return [sol,res]	
 	return "fail"
 def Modulation(expEq,expOr):
-	validEq = lambda eq: "=" in eq
+	validEq = lambda eq: "=" in eq and not "¬" in eq
 	Eq = expEq.split("⊻")
-	Eqs = filter(validEq,Eq)
 	Or = expOr.replace("=","⊻").split("⊻")
-	for eq in Eqs:
-		Eq=eq.split("=")
-		for i in range(2):
-			exE = Eq[i]
-			for exO in Or:
-				if exO[:2]!="¬" and exE[:2]!="¬":
-					res = Unify(exE,exO,{})
-					if res!= "fail":
-						if Eq[(i+1)&1][:2]=="¬":
-							Eq[(i+1)&1]=Eq[(i+1)&1][2:]
-						expEq = expEq.replace(eq,"")
-						expOr = expEq + expOr.replace(exO,Eq[(i+1)&1])
-						for keys in res:
-							expOr = expOr.replace(keys,res[keys])
-						return [CorrectForm(expOr),res]
+	for i in range(len(Eq)):
+		if validEq(Eq[i]):
+			Eqi = Eq[i].split("=")
+			for j in range(len(Or)):
+				for k in range(2):
+					if Or[j][:2]!="¬":
+						res = Unify(Eqi[k],Or[j],{})
+						if res!= "fail":
+							Eq.pop(i)
+							exp = "⊻".join(Eq) +"⊻"+ expOr.replace(Or[j],Eqi[(k+1)&1])
+							for keys in res:
+								exp = exp.replace(keys,res[keys])
+							return [CorrectForm(exp),res]
 	return "fail"
 def Size_Of_Exp(exp):
 	return len(exp.replace("=","⊻").split("⊻"))
@@ -184,26 +173,39 @@ def Reduccion_Absurdo(exps,question):
 			if(Verify_Contradiction(exps)):
 				return "Comprobado"
 	exps.append(question)
-	while k<1 and res:
-		#exps.sort(key=Size_Of_Exp)
-		for i in range(len(exps)):
-			for j in range(len(exps)):
-				if i!= j:
-					res = Resolution(exps[i],exps[j])
-					if  res != "fail":
-						if res[0] not in exps:
-							exps.append(CorrectForm(res[0]))
-						if Verify_Contradiction(exps):
-							#print "\n".join(map(str,exps))
-							return "Comprobado"
-					res = Modulation(exps[i],exps[j])
-					if  res != "fail":
-						if res[0] not in exps:
-							exps.append(CorrectForm(res[0]))
-						if Verify_Contradiction(exps):
-							#print "\n".join(map(str,exps))
-							return "Comprobado"
+	while k<100:
+		exps.sort(key=Size_Of_Exp)
+		sizes = [Size_Of_Exp(exp) for exp in exps]
+		aux= len(exps)
 
+		x = 0
+		y = 1
+		cambio = False
+		while y<aux-1:
+			res = Resolution(exps[x],exps[y])
+			if  res != "fail":
+				if res[0] not in exps:
+					print "Resolution(" + exps[x] + "," + exps[y] + ") \t\t " + res[0]
+					cambio=True
+					exps.append(CorrectForm(res[0]))
+				if Verify_Contradiction(exps):
+					print "\n".join(map(str,exps))
+					return "Comprobado"
+			res = Modulation(exps[x],exps[y])
+			if  res != "fail":
+				if res[0] not in exps:
+					print "Modulation(" + exps[x] + "," + exps[y] + ") \t\t\t\t " + res[0]
+					cambio=True
+					exps.append(CorrectForm(res[0]))
+				if Verify_Contradiction(exps):
+					print "\n".join(map(str,exps))
+					return "Comprobado"
+			if cambio:
+				break
+			x+=1
+			if x>=len(exps):
+				y+=1
+				x=0
 		k+=1
 	print "\n".join(map(str,exps))
 	return "No se sabe"
@@ -215,7 +217,10 @@ exps=[	"M(x)=Fo⊻M(x)=B",\
 		"T(I)",\
 	]
 q = "¬W(I,Fo)"
-print Modulation("¬T(x)⊻M(x)=Fo","M(x)=Fo⊻M(x)=B")[0]
+#print Unify("Cocodrilo(foca,Caballo)=tres","Cocodrilo(mono,serpiente)=dos")
+#print "1".isalnum()
+#print"M(I)=Fo⊻¬M(I)=Fo,M(I)=Fo"
+#print "\n".join(map(str,Modulation("¬M(I)=Fo⊻M(I)=Fo","M(I)=Fo")))
 print Reduccion_Absurdo(exps,q)
 #M(x)=Fo⊻¬T(x)⊻¬M(x)=M(x)
 #print Verify_Contradiction(["D(L(J))","¬D(L(J))"])
