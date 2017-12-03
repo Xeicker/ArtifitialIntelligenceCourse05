@@ -1,4 +1,5 @@
 # -*- coding: UTF-8 -*-
+import os
 def Valor(D):
 	return D[0]/float(len(D))
 def Libres(T):
@@ -47,6 +48,7 @@ def Min(Tc):
 def Update_T(T,v,x,y):
 	Tablero[y] = Tablero[y][:x] + v + Tablero[y][x+1:] 
 def Imprimir_T(T):
+	os.system("clear")
 	print "\n"+"\n_____\n".join(["|".join(Tablero[y]) + "\t" + "|".join(["[" + str(x) +"," +str(y) +"]" for x in range(3)]) for y in range(len(Tablero))])+"\n"
 Tablero = ["   ","   ","   "]
 j = raw_input("Desea jugar con x? [s/n]")
